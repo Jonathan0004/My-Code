@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Math Journey</title>
+<style>
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(to bottom, #f9f9f9, #eaeaea);
+    color: #333;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-bar {
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 12px 20px;
+    font-size: 20px;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+  }
+  .score {
+    float: right;
+    font-weight: 400;
+  }
+  #home {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 {
+    margin-top: 0;
+    font-size: 32px;
+    font-weight: 600;
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 600px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 30px 20px;
+    text-align: center;
+    font-size: 18px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  }
+  #game {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  #level-display {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  #question {
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+  #answer {
+    font-size: 24px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    text-align: center;
+    width: 200px;
+  }
+  .btn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+    background: #007aff;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn:active {
+    background: #0051c7;
+  }
+  .back-btn {
+    background: #ccc;
+    color: #333;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="app-bar">
+  Math Journey
+  <span class="score" id="score">Score: 0</span>
+</div>
+<div id="home">
+  <h1>Select a Subject</h1>
+  <div class="card-grid">
+    <div class="card" data-subject="addition">Addition</div>
+    <div class="card" data-subject="subtraction">Subtraction</div>
+    <div class="card" data-subject="multiplication">Multiplication</div>
+    <div class="card" data-subject="division">Division</div>
+  </div>
+</div>
+<div id="game">
+  <div id="level-display">Level <span id="level">1</span></div>
+  <div id="question">Question</div>
+  <input id="answer" type="number" placeholder="Your answer">
+  <button class="btn" id="submit">Submit</button>
+  <button class="btn back-btn" id="back">Back</button>
+</div>
+<script>
+const subjects = {
+  addition: {
+    name: 'Addition',
+    generate: (max) => {
+      const a = Math.floor(Math.random() * max);
+      const b = Math.floor(Math.random() * max);
+      return { text: `${a} + ${b}`, result: a + b };
+    }
+  },
+  subtraction: {
+    name: 'Subtraction',
+    generate: (max) => {
+      let a = Math.floor(Math.random() * max);
+      let b = Math.floor(Math.random() * max);
+      if (b > a) [a, b] = [b, a];
+      return { text: `${a} - ${b}`, result: a - b };
+    }
+  },
+  multiplication: {
+    name: 'Multiplication',
+    generate: (max) => {
+      const a = Math.floor(Math.random() * (max / 2));
+      const b = Math.floor(Math.random() * (max / 2));
+      return { text: `${a} × ${b}`, result: a * b };
+    }
+  },
+  division: {
+    name: 'Division',
+    generate: (max) => {
+      const b = Math.floor(Math.random() * (max / 2)) + 1;
+      const result = Math.floor(Math.random() * (max / 2));
+      const a = b * result;
+      return { text: `${a} ÷ ${b}`, result };
+    }
+  }
+};
+
+let currentSubject = null;
+let level = 1;
+let score = 0;
+let questionsAnswered = 0;
+let currentQuestion = null;
+
+const scoreEl = document.getElementById('score');
+const homeEl = document.getElementById('home');
+const gameEl = document.getElementById('game');
+const questionEl = document.getElementById('question');
+const levelEl = document.getElementById('level');
+const answerEl = document.getElementById('answer');
+
+function updateScore() {
+  scoreEl.textContent = `Score: ${score}`;
+}
+
+function nextQuestion() {
+  const max = 10 + level * 10;
+  currentQuestion = currentSubject.generate(max);
+  questionEl.textContent = currentQuestion.text;
+  answerEl.value = '';
+  answerEl.focus();
+}
+
+function startSubject(id) {
+  currentSubject = subjects[id];
+  level = 1;
+  score = 0;
+  questionsAnswered = 0;
+  updateScore();
+  levelEl.textContent = level;
+  homeEl.style.display = 'none';
+  gameEl.style.display = 'flex';
+  nextQuestion();
+}
+
+function submitAnswer() {
+  const value = parseInt(answerEl.value, 10);
+  if (isNaN(value)) return;
+  if (value === currentQuestion.result) {
+    score += 10;
+    questionsAnswered += 1;
+    if (questionsAnswered % 5 === 0) {
+      level += 1;
+      levelEl.textContent = level;
+    }
+  }
+  updateScore();
+  nextQuestion();
+}
+
+function backToHome() {
+  gameEl.style.display = 'none';
+  homeEl.style.display = 'flex';
+}
+
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('click', () => startSubject(card.dataset.subject));
+});
+
+document.getElementById('submit').addEventListener('click', submitAnswer);
+
+document.getElementById('back').addEventListener('click', backToHome);
+
+answerEl.addEventListener('keyup', (e) => {
+  if (e.key === 'Enter') submitAnswer();
+});
+</script>
+</body>
+</html>
