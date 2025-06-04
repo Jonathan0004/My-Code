@@ -5,27 +5,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Math Journey</title>
 <style>
+  :root {
+    --primary: #007aff;
+    --background-top: #f5f6fa;
+    --background-bottom: #e2e4ea;
+  }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(to bottom, #f9f9f9, #eaeaea);
+    background: linear-gradient(to bottom, var(--background-top), var(--background-bottom));
     color: #333;
     height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
   .app-bar {
     background: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     padding: 12px 20px;
     font-size: 20px;
     font-weight: 600;
     position: relative;
     z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   .score {
-    float: right;
+    font-size: 16px;
     font-weight: 400;
+  }
+  .high-score {
+    font-size: 14px;
+    color: #555;
   }
   #home {
     flex: 1;
@@ -40,6 +53,18 @@
     font-size: 32px;
     font-weight: 600;
   }
+  .screen {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .screen.active {
+    display: flex;
+    animation: fadeIn 0.4s;
+  }
   .card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -49,17 +74,17 @@
   }
   .card {
     background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     padding: 30px 20px;
     text-align: center;
     font-size: 18px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.3s, box-shadow 0.3s;
     cursor: pointer;
   }
   .card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.12);
   }
   #game {
     flex: 1;
@@ -67,6 +92,7 @@
     flex-direction: column;
     align-items: center;
     padding: 20px;
+    position: relative;
   }
   #level-display {
     font-size: 24px;
@@ -103,28 +129,92 @@
     color: #333;
     margin-top: 10px;
   }
+  #progress-container {
+    width: 100%;
+    max-width: 220px;
+    height: 8px;
+    background: #e1e1e1;
+    border-radius: 4px;
+    margin-top: 16px;
+    overflow: hidden;
+  }
+  #progress-bar {
+    height: 100%;
+    width: 0;
+    background: var(--primary);
+    transition: width 0.3s;
+  }
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .overlay.show {
+    display: flex;
+    animation: fadeIn 0.3s forwards;
+  }
+  .overlay .message {
+    background: #fff;
+    padding: 40px 60px;
+    border-radius: 12px;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--primary);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    animation: pop 0.5s forwards;
+  }
+  .shake {
+    animation: shake 0.4s;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+    75% { transform: translateX(-6px); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop {
+    from { transform: scale(0.8); }
+    to { transform: scale(1); }
+  }
 </style>
 </head>
 <body>
 <div class="app-bar">
-  Math Journey
-  <span class="score" id="score">Score: 0</span>
+  <span>Math Journey</span>
+  <div>
+    <span class="high-score" id="high-score">High Score: 0</span>
+    <span class="score" id="score">Score: 0</span>
+  </div>
 </div>
-<div id="home">
+<div id="home" class="screen active">
   <h1>Select a Subject</h1>
   <div class="card-grid">
     <div class="card" data-subject="addition">Addition</div>
     <div class="card" data-subject="subtraction">Subtraction</div>
     <div class="card" data-subject="multiplication">Multiplication</div>
     <div class="card" data-subject="division">Division</div>
+    <div class="card" data-subject="sqrt">Square Roots</div>
   </div>
 </div>
-<div id="game">
+<div id="game" class="screen">
   <div id="level-display">Level <span id="level">1</span></div>
   <div id="question">Question</div>
   <input id="answer" type="number" placeholder="Your answer">
+  <div id="progress-container"><div id="progress-bar"></div></div>
   <button class="btn" id="submit">Submit</button>
   <button class="btn back-btn" id="back">Back</button>
+  <div id="overlay" class="overlay"><div class="message">Level Up!</div></div>
 </div>
 <script>
 const subjects = {
@@ -161,6 +251,14 @@ const subjects = {
       const a = b * result;
       return { text: `${a} ÷ ${b}`, result };
     }
+  },
+  sqrt: {
+    name: 'Square Roots',
+    generate: (max) => {
+      const result = Math.floor(Math.random() * (max / 2)) + 1;
+      const a = result * result;
+      return { text: `√${a}`, result };
+    }
   }
 };
 
@@ -171,14 +269,31 @@ let questionsAnswered = 0;
 let currentQuestion = null;
 
 const scoreEl = document.getElementById('score');
+const highScoreEl = document.getElementById('high-score');
 const homeEl = document.getElementById('home');
 const gameEl = document.getElementById('game');
 const questionEl = document.getElementById('question');
 const levelEl = document.getElementById('level');
 const answerEl = document.getElementById('answer');
+const progressBar = document.getElementById('progress-bar');
+const overlay = document.getElementById('overlay');
+
+let highScore = parseInt(localStorage.getItem('math-high-score') || '0', 10);
+highScoreEl.textContent = `High Score: ${highScore}`;
+
+function showScreen(el) {
+  homeEl.classList.remove('active');
+  gameEl.classList.remove('active');
+  el.classList.add('active');
+}
 
 function updateScore() {
   scoreEl.textContent = `Score: ${score}`;
+}
+
+function updateProgress() {
+  const progress = (questionsAnswered % 5) / 5 * 100;
+  progressBar.style.width = progress + '%';
 }
 
 function nextQuestion() {
@@ -187,6 +302,7 @@ function nextQuestion() {
   questionEl.textContent = currentQuestion.text;
   answerEl.value = '';
   answerEl.focus();
+  updateProgress();
 }
 
 function startSubject(id) {
@@ -196,8 +312,8 @@ function startSubject(id) {
   questionsAnswered = 0;
   updateScore();
   levelEl.textContent = level;
-  homeEl.style.display = 'none';
-  gameEl.style.display = 'flex';
+  showScreen(gameEl);
+  updateProgress();
   nextQuestion();
 }
 
@@ -210,15 +326,24 @@ function submitAnswer() {
     if (questionsAnswered % 5 === 0) {
       level += 1;
       levelEl.textContent = level;
+      overlay.classList.add('show');
+      setTimeout(() => overlay.classList.remove('show'), 1000);
     }
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem('math-high-score', highScore);
+      highScoreEl.textContent = `High Score: ${highScore}`;
+    }
+  } else {
+    answerEl.classList.add('shake');
+    setTimeout(() => answerEl.classList.remove('shake'), 400);
   }
   updateScore();
   nextQuestion();
 }
 
 function backToHome() {
-  gameEl.style.display = 'none';
-  homeEl.style.display = 'flex';
+  showScreen(homeEl);
 }
 
 document.querySelectorAll('.card').forEach(card => {
